@@ -2,14 +2,16 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
   "start": "node server.js",
   "seed": "node seed.js",
-  "dev": "nodemon server.js"
+  "dev": "nodemon server.js",
+  "dev:fresh": "node seed.js && nodemon server.js"
+
 },
   "keywords": [],
-  "author": "",
+  "author": "Rahul",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
