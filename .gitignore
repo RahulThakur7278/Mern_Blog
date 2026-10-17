@@ -56,5 +56,3 @@ script.ps1
 .env.production
 .env.development
 
-backend/seed.js
-README.md
