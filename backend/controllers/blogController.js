@@ -137,31 +137,22 @@ const getMyBlogs = async (req, res) => {
 
 // Edit own blog — only the author can edit
 // Called by: EditBlog.jsx → Edit button → PUT /api/blog/update/:id
+// Edit blog
 const editBlog = async (req, res) => {
   try {
-    const blogId = req.params.id;
-    const blog = await Blog.findById(blogId);
+    const blog = await Blog.findById(req.params.id);
+    if (!blog) return res.status(404).json({ message: 'Blog not found.' });
 
-    if (!blog) {
-      return res.status(404).json({ message: 'Blog not found.' });
-    }
-
-    // Only the author can edit their own blog
-    if (blog.author.toString() !== req.user.id) {
-      return res.status(403).json({
-        message: 'You can only edit your own blog.'
-      });
+    // Allow if user is the author OR if user is an admin
+    if (blog.author.toString() !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Not authorized to edit this blog.' });
     }
 
     blog.title = req.body.title || blog.title;
     blog.content = req.body.content || blog.content;
     const updatedBlog = await blog.save();
 
-    res.status(200).json({
-      message: 'Blog updated successfully!',
-      blog: updatedBlog
-    });
-
+    res.status(200).json({ message: 'Blog updated!', blog: updatedBlog });
   } catch (error) {
     console.error('Edit blog error:', error.message);
     res.status(500).json({
@@ -170,28 +161,22 @@ const editBlog = async (req, res) => {
   }
 };
 
-// Delete own blog — only the author can delete
-// Called by: Dashboard.jsx → Delete button → DELETE /api/blog/delete/:id
+// Delete blog (Using Soft Delete now)
 const deleteBlog = async (req, res) => {
   try {
-    const blogId = req.params.id;
-    const blog = await Blog.findById(blogId);
+    const blog = await Blog.findById(req.params.id);
+    if (!blog) return res.status(404).json({ message: 'Blog not found.' });
 
-    if (!blog) {
-      return res.status(404).json({ message: 'Blog not found.' });
+    // Allow if user is the author OR if user is an admin
+    if (blog.author.toString() !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Not authorized to delete this blog.' });
     }
 
-    // Only the author can delete their own blog
-    if (blog.author.toString() !== req.user.id) {
-      return res.status(403).json({
-        message: 'You can only delete your own blog.'
-      });
-    }
-
-    await Blog.findByIdAndDelete(blogId);
+    // SOFT DELETE: Instead of Blog.findByIdAndDelete(), we set isDeleted to true
+    blog.isDeleted = true;
+    await blog.save();
 
     res.status(200).json({ message: 'Blog deleted successfully!' });
-
   } catch (error) {
     console.error('Delete blog error:', error.message);
     res.status(500).json({

@@ -62,7 +62,10 @@ const blogSchema = new mongoose.Schema({
         default: Date.now
       }
     }
-  ]
+  ], isDeleted: {
+    type: Boolean,
+    default: false
+  }
 
 }, {
   // Automatically adds createdAt and updatedAt fields
