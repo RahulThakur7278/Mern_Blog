@@ -12,7 +12,7 @@
 // --------------------
 // 1. IMPORTS
 // --------------------
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 
 // Pages
 import Home from './pages/Home';
@@ -22,7 +22,8 @@ import Dashboard from './pages/Dashboard';
 import CreateBlog from './pages/CreateBlog';
 import EditBlog from './pages/EditBlog';
 import BlogDetail from './pages/BlogDetail';
-import AdminPanel from './pages/AdminPanel';
+import AdminPanel from './pages/AdminPanel'; // This is now the Pending Blogs page
+import AdminAnalytics from './pages/AdminAnalytics'; // The new Analytics & Users page
 
 // Components
 import Navbar from './components/Navbar';
@@ -77,14 +78,33 @@ function App() {
           />
 
           {/* ---- ADMIN ONLY ROUTES ---- */}
+          
+          {/* Redirect base /admin to the analytics page */}
+          <Route 
+            path="/admin" 
+            element={<Navigate to="/admin/analytics" replace />} 
+          />
+
+          {/* Analytics & User List Page */}
           <Route
-            path="/admin"
+            path="/admin/analytics"
+            element={
+              <ProtectedRoute adminOnly={true}>
+                <AdminAnalytics />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Pending Blogs Review Page */}
+          <Route
+            path="/admin/pending"
             element={
               <ProtectedRoute adminOnly={true}>
                 <AdminPanel />
               </ProtectedRoute>
             }
           />
+
         </Routes>
         </PageTransition>
       </main>

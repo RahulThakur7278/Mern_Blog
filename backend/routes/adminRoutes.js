@@ -17,7 +17,11 @@ const {
 } = require('../controllers/blogController');
 
 const { protect, adminOnly } = require('../middleware/authMiddleware');
-
+const {
+  getDashboardStats,
+  getAllUsers,
+  deleteUser
+} = require('../controllers/adminController');
 // GET /api/admin/pending — All pending blogs
 // Called by: AdminPanel.jsx
 router.get('/pending', protect, adminOnly, getPendingBlogs);
@@ -37,5 +41,15 @@ router.put('/reject/:id', protect, adminOnly, (req, res, next) => {
   req.body.status = 'rejected';
   next();
 }, updateBlogStatus);
+
+// GET /api/admin/dashboard — Get stats for the React UI
+router.get('/dashboard', protect, adminOnly, getDashboardStats);
+
+// GET /api/admin/users — Get list of users and their post counts
+router.get('/users', protect, adminOnly, getAllUsers);
+
+// DELETE /api/admin/users/:id — Remove a user
+router.delete('/users/:id', protect, adminOnly, deleteUser);
+
 
 module.exports = router;
