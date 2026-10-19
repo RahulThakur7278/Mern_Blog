@@ -11,7 +11,7 @@
 // 1. IMPORTS
 // --------------------
 const User = require('../models/User');
-
+const crypto = require('crypto'); // For generating random passwords for Google users
 // bcryptjs — password hashing (encryption)
 // We never store passwords in plain text.
 // If the database is leaked, hashed passwords are safe.
@@ -89,6 +89,39 @@ const register = async (req, res) => {
   }
 };
 
+const googleSignUp = async (req, res) => {
+  try {
+    const { email, name, role = 'user' } = req.body;
+
+    // Check if user already exists
+        let user = await User.findOne({ email });
+ if (!user) {
+        // Create new user if they don't exist
+        // Generate a random secure password for Google users since schema requires it
+        const randomPassword = crypto.randomBytes(20).toString('hex');
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(randomPassword, salt);
+
+        user = await User.create({
+            name,
+            email,
+             // Ensure we satisfy the required phone field if not given
+            role,
+            password: hashedPassword,
+        });
+    }
+    res.status(201).json({
+      message: 'Google signup successful! Please login now.'
+    });
+
+  } catch (error) {
+    console.error('Google signup error:', error.message);
+    res.status(500).json({
+      message: 'Server error. Please try again later.'
+    });
+  }
+};
+
 // --------------------
 // 4. LOGIN FUNCTION
 // --------------------
@@ -150,7 +183,49 @@ const login = async (req, res) => {
   }
 };
 
+const googleSignIn = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    // Find user by email
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({
+        message: 'User not found. Please sign up first.'
+      });
+    }
+
+    // Generate JWT token with user ID and role
+    const token = jwt.sign(
+      {
+        id: user._id,
+        role: user.role
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '1d' }
+    );
+
+    res.status(200).json({
+      message: 'Google sign-in successful!',
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
+
+  } catch (error) {
+    console.error('Google sign-in error:', error.message);
+    res.status(500).json({
+      message: 'Server error. Please try again later.'
+    });
+  }
+};
+
 // --------------------
 // 4. EXPORT FUNCTIONS
 // --------------------
-module.exports = { register, login };
+module.exports = { register, googleSignUp, login, googleSignIn };
