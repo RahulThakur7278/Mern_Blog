@@ -14,7 +14,7 @@
 const express = require('express');
 const router = express.Router();
 
-const { register, login } = require('../controllers/authController');
+const { register,googleSignUp, login,googleSignIn} = require('../controllers/authController');
 
 // --------------------
 // 2. ROUTES
@@ -25,13 +25,13 @@ const { register, login } = require('../controllers/authController');
 // Creates a new user in the database
 // Request body: { name, email, password }
 router.post('/register', register);
-
+router.post('/google-signup', googleSignUp); // New route for Google signup
 // ROUTE: POST /api/auth/login
 // Called by: Login.jsx (frontend)
 // Verifies credentials and returns JWT token
 // Request body: { email, password }
 router.post('/login', login);
-
+router.post('/google-signin', googleSignIn); // New route for Google login
 // --------------------
 // 3. EXPORT ROUTER
 // --------------------
