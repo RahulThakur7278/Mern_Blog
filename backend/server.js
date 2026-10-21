@@ -1,26 +1,17 @@
 // ============================================
 // FILE: server.js
 // PURPOSE: Main entry point for the backend server.
-//          Express app is created here, connected to MongoDB,
-//          and all routes are registered. Run with "npm run dev".
-// CALLED FROM: Terminal — node server.js or npm run dev
-// CONNECTED TO: .env (config), authRoutes.js, blogRoutesV2.js
 // ============================================
 
 // --------------------
 // 1. IMPORTS
 // --------------------
-// Load environment variables from .env file
 require('dotenv').config();
-
-// Express — web framework for creating API routes
 const express = require('express');
-
-// cors — allows cross-origin requests
 const cors = require('cors');
-
-// Mongoose — MongoDB object modeling for Node.js
 const mongoose = require('mongoose');
+const helmet = require('helmet'); // <-- ADDED IMPORT
+const rateLimit = require('express-rate-limit'); // <-- ADDED IMPORT
 
 // Import route files
 const authRoutes = require('./routes/authRoutes');
@@ -35,17 +26,47 @@ const app = express();
 // --------------------
 // 3. MIDDLEWARE SETUP
 // --------------------
-// Enable CORS so frontend (localhost:5173) can call backend (localhost:5000)
+
+// Security Headers (Helmet)
+// crossOriginResourcePolicy is relaxed to allow your frontend to fetch images/assets if needed
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+
+// CORS
 app.use(cors());
 
 // Parse JSON request bodies
 app.use(express.json());
 
+// Rate Limiting
+// 1. Global limiter (for general API requests)
+const globalLimiter = rateLimit({
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10), // 15 minutes
+  max: parseInt(process.env.RATE_LIMIT_MAX || '100', 10), // Limit each IP to 100 requests per windowMs
+  standardHeaders: true, 
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many requests. Please try again later.' },
+});
+
+// 2. Strict limiter (for Auth routes - prevents brute-force login attempts)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // Limit each IP to 20 login/register attempts per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many login attempts. Please try again after 15 minutes.' },
+});
+
+// Apply global limiter to all requests
+app.use(globalLimiter);
+
 // --------------------
 // 4. MOUNT ROUTES
 // --------------------
-// Auth routes — prefix: /api/auth
-app.use('/api/auth', authRoutes);
+
+// Auth routes — use the strict limiter here to stop brute-force attacks
+app.use('/api/auth', authLimiter, authRoutes);
 
 // Blog routes — prefix: /api/blog
 app.use('/api/blog', blogRoutes);
@@ -61,27 +82,22 @@ app.get('/', (req, res) => {
 // --------------------
 // 5. GLOBAL ERROR HANDLER
 // --------------------
-// Catches all unhandled errors from route handlers
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err.message);
 
-  // Mongoose validation error
   if (err.name === 'ValidationError') {
     const messages = Object.values(err.errors).map(e => e.message);
     return res.status(400).json({ message: messages.join(', ') });
   }
 
-  // Mongoose duplicate key error
   if (err.code === 11000) {
     return res.status(400).json({ message: 'Duplicate value. This record already exists.' });
   }
 
-  // Mongoose cast error (invalid ObjectId)
   if (err.name === 'CastError') {
     return res.status(400).json({ message: 'Invalid ID format.' });
   }
 
-  // JWT errors
   if (err.name === 'JsonWebTokenError') {
     return res.status(401).json({ message: 'Invalid token.' });
   }
@@ -89,7 +105,6 @@ app.use((err, req, res, next) => {
     return res.status(401).json({ message: 'Token expired. Please login again.' });
   }
 
-  // Default server error
   res.status(err.status || 500).json({
     message: err.message || 'Server error. Please try again later.'
   });
