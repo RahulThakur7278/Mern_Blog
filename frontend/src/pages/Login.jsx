@@ -64,8 +64,8 @@ const Login = () => {
       // Call the same endpoint as register (it will log them in if they exist)
       const response = await api.post('/api/auth/google-signin', {
         email: result.user.email,
-        name: result.user.displayName,
-        role: 'user'
+        // name: result.user.displayName,
+        // role: 'user'
       });
 
       // Save token and redirect
